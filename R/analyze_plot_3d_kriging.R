@@ -234,7 +234,7 @@ analyze_plot_3d_kriging <- function(
       oob = scales::squish
     ) +
     ggplot2::labs(title = title_pred, x = "Local X", y = "Local Y") +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_bw() +
     ggplot2::theme(
       strip.text = ggplot2::element_text(face = "bold"),
       strip.background = ggplot2::element_rect(fill = "grey95", colour = NA)
@@ -260,7 +260,7 @@ analyze_plot_3d_kriging <- function(
       oob = scales::squish
     ) +
     ggplot2::labs(title = title_se, x = "Local X", y = "Local Y") +
-    ggplot2::theme_minimal() +
+    ggplot2::theme_bw() +
     ggplot2::theme(
       strip.text = ggplot2::element_text(face = "bold"),
       strip.background = ggplot2::element_rect(fill = "grey95", colour = NA)

@@ -111,7 +111,7 @@ p_profiles <- ggplot(
     colour = "Treatment",
     title = "Mean penetration resistance profiles by location"
   ) +
-  theme_minimal()
+  theme_bw()
 
 
 p_profiles
@@ -402,6 +402,12 @@ ggplot(slice_unc_multi,
 
 # try function
 
+pr_limits <- quantile(
+  long_data$penetration_resistance,
+  c(0.02, 0.98),
+  na.rm = TRUE
+)
+
 pr_limits <- c(0, pr_limits[2])  # force min = 0
 
 
@@ -410,17 +416,15 @@ res <- analyze_plot_3d_kriging(long_data, id_i = 26012232,
 res$pred_plot
 res$se_plot
 
-ids <- sort(unique(long_data$id))
 
 
-pr_limits <- quantile(
-  long_data$penetration_resistance,
-  c(0.02, 0.98),
-  na.rm = TRUE
-)
+
+
 
 
 # force the legend scales to the same for all
+
+ids <- sort(unique(long_data$id))
 
 pr_limits <- c(0, max(long_data$penetration_resistance, na.rm = TRUE))
 se_limits <- c(0, max(sqrt(res$kriged_3d$var1.var), na.rm = TRUE))
