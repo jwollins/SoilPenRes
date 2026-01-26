@@ -102,7 +102,15 @@ p_profiles <- ggplot(
       colour = factor(treatment),
       group = interaction(treatment, id))
 ) +
-  geom_path(linewidth = 1, alpha = 0.8) +
+  geom_errorbarh(
+    aes(xmin = mean - sem, xmax = mean + sem),
+    height = 0.8,
+    alpha = 0.3   # error bars more transparent
+  ) +
+  geom_path(
+    linewidth = 1,
+    alpha = 1   # mean lines more visible
+  ) +
   scale_y_reverse() +
   facet_wrap(~ location) +
   labs(
@@ -118,7 +126,7 @@ p_profiles
 
 ggsave(file.path(plot_dir, "figure_01_mean_profiles.png"),
        plot = p_profiles,
-       height = 6, width = 8, dpi = 300)
+       height = 5, width = 8, dpi = 300)
 
 
 
@@ -129,12 +137,11 @@ ggsave(file.path(plot_dir, "figure_01_mean_profiles.png"),
 
 
 
-glimpse(long_data)
-
-glimpse(local_coords)
 
 
-# add local coordinates
+
+
+# ---- add local coordinates ----
 
 long_data <- long_data %>%
   mutate(treatment = as.integer(as.character(treatment)))
@@ -162,8 +169,7 @@ long_data %>%
 
 
 
-library(dplyr)
-library(plotly)
+
 
 plot_id <- 1
 id_i <- 26012235
@@ -227,173 +233,173 @@ p3d_local
 
 
 
-# ---- Spatial interpolation: 3D kriging + stacked 2D surfaces ----
-
-library(dplyr)
-library(sp)
-library(gstat)
-library(akima)
-
-# ---- Parameters ----
-id_i    <- 26012235
-z_scale <- 5
-
-x_range <- c(0, 500)
-y_range <- c(0, 500)
-depth_range <- c(1, 82)
-
-nx <- 30
-ny <- 30
-nz <- 82
-
-cutoff_3d <- 600
-width_3d  <- 30
-
-# ---- Data (one file/id) ----
-dfp <- long_data %>%
-  filter(id == id_i) %>%
-  mutate(
-    depth = as.numeric(depth),
-    penetration_resistance = as.numeric(penetration_resistance),
-    z_scaled = depth * z_scale
-  )
-
-# Convert to SpatialPointsDataFrame (3D coordinates)
-coordinates(dfp) <- ~ local_x + local_y + z_scaled
-
-# ---- 3D variogram + fit ----
-vgm3d <- variogram(
-  penetration_resistance ~ 1,
-  dfp,
-  cutoff = cutoff_3d,
-  width = width_3d
-)
-
-v0 <- var(dfp$penetration_resistance, na.rm = TRUE)
-
-m0 <- vgm(
-  psill  = 0.5 * v0,
-  model  = "Sph",
-  range  = 150,          # tweak based on plot(vgm3d)
-  nugget = 0.1 * v0
-)
-
-fit <- fit.variogram(vgm3d, model = m0)
-
-# Optional diagnostics
-plot(vgm3d, main = "3D empirical variogram")
-plot(vgm3d, fit, main = "3D variogram with fitted model")
-
-# ---- 3D prediction grid (IMPORTANT: use z_scaled) ----
-xg <- seq(x_range[1], x_range[2], length.out = nx)
-yg <- seq(y_range[1], y_range[2], length.out = ny)
-zg <- seq(depth_range[1], depth_range[2], length.out = nz)
-
-grid <- expand.grid(
-  local_x  = xg,
-  local_y  = yg,
-  z_scaled = zg * z_scale
-)
-
-coordinates(grid) <- ~ local_x + local_y + z_scaled
-
-kriged_3d <- krige(
-  penetration_resistance ~ 1,
-  dfp,
-  newdata = grid,
-  model = fit
-)
-
-# kriged_3d is a SpatialPointsDataFrame with var1.pred and var1.var
-# head(kriged_3d@data)
-
-# ---- Stacked 2D interpolation (per depth) ----
-make_depth_surface <- function(depth_i, n = 50) {
-  df_d <- long_data %>%
-    filter(id == id_i, depth == depth_i) %>%
-    mutate(
-      local_x = as.numeric(local_x),
-      local_y = as.numeric(local_y),
-      penetration_resistance = as.numeric(penetration_resistance)
-    )
-
-  akima::interp(
-    x = df_d$local_x,
-    y = df_d$local_y,
-    z = df_d$penetration_resistance,
-    xo = seq(x_range[1], x_range[2], length.out = n),
-    yo = seq(y_range[1], y_range[2], length.out = n),
-    linear = TRUE
-  )
-}
-
-cube_2d <- lapply(seq(depth_range[1], depth_range[2]), make_depth_surface)
-
-
-
-depths <- c(10, 20, 30, 40, 60, 70, 80)
-
-slice_multi <- as.data.frame(kriged_3d) %>%
-  mutate(depth = round(z_scaled / z_scale)) %>%
-  filter(depth %in% depths)
-
-library(viridis)
-
-ggplot(slice_multi,
-       aes(local_x, local_y, fill = var1.pred)) +
-  geom_raster() +
-  coord_equal(xlim = c(0, 500), ylim = c(0, 500), expand = FALSE) +
-  facet_wrap(~ depth, ncol = 3) +
-  scale_fill_viridis_c(option = "inferno", name = "PR (MPa)") +
-  labs(
-    title = "3D kriged penetration resistance slices",
-    x = "Local X",
-    y = "Local Y"
-  ) +
-  theme_minimal() +
-  facet_wrap(
-    ~ depth,
-    ncol = 3,
-    labeller = labeller(
-      depth = function(x) paste0("Depth = ", x, " cm")
-    )
-  ) +
-  theme(
-    strip.text = element_text(face = "bold"),
-    strip.background = element_rect(fill = "grey95", colour = NA)
-  )
-
-
+# # ---- Spatial interpolation: 3D kriging + stacked 2D surfaces ----
+#
+# library(dplyr)
+# library(sp)
+# library(gstat)
+# library(akima)
+#
+# # ---- Parameters ----
+# id_i    <- 26012235
+# z_scale <- 5
+#
+# x_range <- c(0, 500)
+# y_range <- c(0, 500)
+# depth_range <- c(1, 82)
+#
+# nx <- 30
+# ny <- 30
+# nz <- 82
+#
+# cutoff_3d <- 600
+# width_3d  <- 30
+#
+# # ---- Data (one file/id) ----
+# dfp <- long_data %>%
+#   filter(id == id_i) %>%
+#   mutate(
+#     depth = as.numeric(depth),
+#     penetration_resistance = as.numeric(penetration_resistance),
+#     z_scaled = depth * z_scale
+#   )
+#
+# # Convert to SpatialPointsDataFrame (3D coordinates)
+# coordinates(dfp) <- ~ local_x + local_y + z_scaled
+#
+# # ---- 3D variogram + fit ----
+# vgm3d <- variogram(
+#   penetration_resistance ~ 1,
+#   dfp,
+#   cutoff = cutoff_3d,
+#   width = width_3d
+# )
+#
+# v0 <- var(dfp$penetration_resistance, na.rm = TRUE)
+#
+# m0 <- vgm(
+#   psill  = 0.5 * v0,
+#   model  = "Sph",
+#   range  = 150,          # tweak based on plot(vgm3d)
+#   nugget = 0.1 * v0
+# )
+#
+# fit <- fit.variogram(vgm3d, model = m0)
+#
+# # Optional diagnostics
+# plot(vgm3d, main = "3D empirical variogram")
+# plot(vgm3d, fit, main = "3D variogram with fitted model")
+#
+# # ---- 3D prediction grid (IMPORTANT: use z_scaled) ----
+# xg <- seq(x_range[1], x_range[2], length.out = nx)
+# yg <- seq(y_range[1], y_range[2], length.out = ny)
+# zg <- seq(depth_range[1], depth_range[2], length.out = nz)
+#
+# grid <- expand.grid(
+#   local_x  = xg,
+#   local_y  = yg,
+#   z_scaled = zg * z_scale
+# )
+#
+# coordinates(grid) <- ~ local_x + local_y + z_scaled
+#
+# kriged_3d <- krige(
+#   penetration_resistance ~ 1,
+#   dfp,
+#   newdata = grid,
+#   model = fit
+# )
+#
+# # kriged_3d is a SpatialPointsDataFrame with var1.pred and var1.var
+# # head(kriged_3d@data)
+#
+# # ---- Stacked 2D interpolation (per depth) ----
+# make_depth_surface <- function(depth_i, n = 50) {
+#   df_d <- long_data %>%
+#     filter(id == id_i, depth == depth_i) %>%
+#     mutate(
+#       local_x = as.numeric(local_x),
+#       local_y = as.numeric(local_y),
+#       penetration_resistance = as.numeric(penetration_resistance)
+#     )
+#
+#   akima::interp(
+#     x = df_d$local_x,
+#     y = df_d$local_y,
+#     z = df_d$penetration_resistance,
+#     xo = seq(x_range[1], x_range[2], length.out = n),
+#     yo = seq(y_range[1], y_range[2], length.out = n),
+#     linear = TRUE
+#   )
+# }
+#
+# cube_2d <- lapply(seq(depth_range[1], depth_range[2]), make_depth_surface)
+#
+#
+#
+# depths <- c(10, 20, 30, 40, 60, 70, 80)
+#
+# slice_multi <- as.data.frame(kriged_3d) %>%
+#   mutate(depth = round(z_scaled / z_scale)) %>%
+#   filter(depth %in% depths)
+#
+# library(viridis)
+#
+# ggplot(slice_multi,
+#        aes(local_x, local_y, fill = var1.pred)) +
+#   geom_raster() +
+#   coord_equal(xlim = c(0, 500), ylim = c(0, 500), expand = FALSE) +
+#   facet_wrap(~ depth, ncol = 3) +
+#   scale_fill_viridis_c(option = "inferno", name = "PR (MPa)") +
+#   labs(
+#     title = "3D kriged penetration resistance slices",
+#     x = "Local X",
+#     y = "Local Y"
+#   ) +
+#   theme_minimal() +
+#   facet_wrap(
+#     ~ depth,
+#     ncol = 3,
+#     labeller = labeller(
+#       depth = function(x) paste0("Depth = ", x, " cm")
+#     )
+#   ) +
+#   theme(
+#     strip.text = element_text(face = "bold"),
+#     strip.background = element_rect(fill = "grey95", colour = NA)
+#   )
 
 
 
 
 
-depths <- c(10, 20, 30, 40, 60)
-
-slice_unc_multi <- as.data.frame(kriged_3d) %>%
-  mutate(depth = round(z_scaled / z_scale)) %>%
-  filter(depth %in% depths)
 
 
-slice_unc_multi <- slice_unc_multi %>%
-  mutate(kriging_se = sqrt(var1.var))
-
-ggplot(slice_unc_multi,
-       aes(local_x, local_y, fill = kriging_se)) +
-  geom_raster() +
-  coord_equal(xlim = c(0, 500), ylim = c(0, 500), expand = FALSE) +
-  facet_wrap(~ depth,
-             ncol = 3,
-             labeller = labeller(depth = function(x) paste0(x, " cm"))) +
-  scale_fill_viridis_c(option = "magma", name = "Kriging SE (MPa)") +
-  labs(
-    title = "Standard error of 3D kriged penetration resistance",
-    x = "Local X",
-    y = "Local Y"
-  ) +
-  theme_minimal() +
-  theme(strip.text = element_text(face = "bold"))
+# depths <- c(10, 20, 30, 40, 60)
+#
+# slice_unc_multi <- as.data.frame(kriged_3d) %>%
+#   mutate(depth = round(z_scaled / z_scale)) %>%
+#   filter(depth %in% depths)
+#
+#
+# slice_unc_multi <- slice_unc_multi %>%
+#   mutate(kriging_se = sqrt(var1.var))
+#
+# ggplot(slice_unc_multi,
+#        aes(local_x, local_y, fill = kriging_se)) +
+#   geom_raster() +
+#   coord_equal(xlim = c(0, 500), ylim = c(0, 500), expand = FALSE) +
+#   facet_wrap(~ depth,
+#              ncol = 3,
+#              labeller = labeller(depth = function(x) paste0(x, " cm"))) +
+#   scale_fill_viridis_c(option = "magma", name = "Kriging SE (MPa)") +
+#   labs(
+#     title = "Standard error of 3D kriged penetration resistance",
+#     x = "Local X",
+#     y = "Local Y"
+#   ) +
+#   theme_minimal() +
+#   theme(strip.text = element_text(face = "bold"))
 
 
 
