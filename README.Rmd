@@ -18,37 +18,29 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of SoilPenRes is to ...
+SoilPenRes provides tools for reading, cleaning, reshaping, and summarising
+penetrologger (soil penetration resistance) data exported from ERP / Eijkelkamp systems.
+
+The package supports reproducible workflows for:
+
+Parsing raw .txt penetrologger files
+
+Extracting metadata and coordinates
+
+Converting wide depth profiles to tidy long format
+
+Generating summary depth profiles (mean, SD, SEM)
+
+Producing analysis-ready data for plotting and modelling
+
+It is intended for researchers working with field-based soil compaction measurements.
 
 ## Installation
 
 You can install the development version of SoilPenRes like so:
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+# install.packages("remotes")
+remotes::install_github("joecollins/SoilPenRes")
 ```
 
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-```{r example}
-library(SoilPenRes)
-## basic example code
-```
-
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
-
-```{r cars}
-summary(cars)
-```
-
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this.
-
-You can also embed plots, for example:
-
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
