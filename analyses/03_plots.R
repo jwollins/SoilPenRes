@@ -40,7 +40,7 @@ long_data <- read.csv(file.path(long_dir, "long_format_data.csv"))
 summary_profiles <- read.csv(file.path(sum_dir, "summary_profiles.csv"))
 meta_info <- read.csv(file.path(info_dir, "meta_info.csv"))
 
-local_coords <- read.csv(file.path(info_dir, "local_coords.csv"))
+local_coords <- read.csv(file.path(info_dir, "local_coords2.csv"))
 
 # ---- Basic sanity checks ----
 glimpse(long_data)
@@ -77,10 +77,23 @@ theme_set(
 
 
 
+glimpse(long_data)
+
+
+
+
+
+# ---- select ID -----
+
+long_data_ids <- long_data %>%
+  filter(id %in% c(26012900))
+
+
+
 
 # ---- plots -----
 
-summary_profiles <- long_data %>%
+summary_profiles <- long_data_ids %>%
   mutate(
     depth = as.numeric(depth),
     penetration_resistance = as.numeric(penetration_resistance)
@@ -123,10 +136,10 @@ p_profiles <- ggplot(
 
 
 p_profiles
-
-ggsave(file.path(plot_dir, "figure_01_mean_profiles.png"),
-       plot = p_profiles,
-       height = 5, width = 8, dpi = 300)
+#
+# ggsave(file.path(plot_dir, "figure_01_mean_profiles.png"),
+#        plot = p_profiles,
+#        height = 5, width = 8, dpi = 300)
 
 
 
@@ -143,72 +156,156 @@ ggsave(file.path(plot_dir, "figure_01_mean_profiles.png"),
 
 # ---- add local coordinates ----
 
-long_data <- long_data %>%
-  mutate(treatment = as.integer(as.character(treatment)))
+glimpse(long_data_ids)
 
-local_coords <- local_coords %>%
-  mutate(treatment = as.integer(treatment))
+# long_data_ids <- long_data_ids %>%
+#   mutate(treatment = as.integer(as.character(treatment)))
+
+# long_data_ids <- long_data_ids %>%
+#   mutate(treatment_id = as.integer(treatment))
+#
+# local_coords <- local_coords %>%
+#   mutate(treatment = as.integer(treatment))
+#
+#
+# long_data_ids <- long_data_ids %>%
+#   left_join(
+#     local_coords,
+#     by = c("treatment", "replicate_number")
+#   )
+#
+# long_data_ids %>%
+#   summarise(
+#     n_missing_x = sum(is.na(local_x)),
+#     n_missing_y = sum(is.na(local_y))
+#   )
 
 
-long_data <- long_data %>%
+library(dplyr)
+
+long_data_ids2 <- long_data_ids %>%
   left_join(
-    local_coords,
-    by = c("treatment", "replicate_number")
+    local_coords %>% select(plot, replicate_number, local_x, local_y, square_number, square_letter),
+    by = c("plot_number" = "plot", "replicate_number" = "replicate_number")
   )
 
-long_data %>%
+long_data_ids2 %>%
   summarise(
     n_missing_x = sum(is.na(local_x)),
     n_missing_y = sum(is.na(local_y))
   )
 
 
+library(dplyr)
 
+SQUARE_SIZE <- 500  # cm
 
+# Create a consistent letter -> column index mapping
+letter_map <- long_data_ids2 %>%
+  distinct(square_letter) %>%
+  filter(!is.na(square_letter)) %>%
+  arrange(square_letter) %>%                 # change this if your field order differs
+  mutate(square_col = row_number())
 
-
-
-
-
-
-plot_id <- 1
-id_i <- 26012235
-
-dfp_local <- long_data %>%
-  filter(id == id_i, plot_number == plot_id) %>%
+long_data_ids2 <- long_data_ids2 %>%
+  left_join(letter_map, by = "square_letter") %>%
   mutate(
-    z = -depth
+    square_row = square_number,              # assuming 1,2,3... are rows
+    field_x = local_x + (square_col - 1) * SQUARE_SIZE,
+    field_y = local_y + (square_row - 1) * SQUARE_SIZE
+  )
+
+# sanity check
+long_data_ids2 %>%
+  summarise(
+    n_missing_field_x = sum(is.na(field_x)),
+    n_missing_field_y = sum(is.na(field_y))
   )
 
 
-p3d_local <- plot_ly(
-  dfp_local,
-  x = ~local_x, y = ~local_y, z = ~z,
+
+library(plotly)
+
+df_all <- long_data_ids2 %>%
+  filter(id == 26012900) %>%
+  mutate(z = -depth,
+         plot_rep = interaction(plot_number, replicate_number, drop = TRUE))
+
+plot_ly(
+  df_all,
+  x = ~field_x, y = ~field_y, z = ~z,
   color = ~penetration_resistance,
-  split = ~replicate_number,
+  split = ~plot_rep,
   type = "scatter3d",
   mode = "lines",
-  line = list(width = 5),
+  line = list(width = 3),
   text = ~paste(
-    "Name:", name,
+    "Plot:", plot_number,
+    "<br>Square:", square_number, square_letter,
     "<br>Rep:", replicate_number,
     "<br>Depth:", depth,
     "<br>PR:", penetration_resistance
   )
 ) %>%
   layout(
-    showlegend = FALSE,   # <- THIS removes the line legend
+    showlegend = FALSE,
     scene = list(
-      xaxis = list(title = "Local X", range = c(0, 500)),
-      yaxis = list(title = "Local Y", range = c(0, 500)),
+      xaxis = list(title = "Field X (cm)"),
+      yaxis = list(title = "Field Y (cm)"),
       zaxis = list(title = "Depth (cm)"),
-      aspectmode = "manual",
-      aspectratio = list(x = 1, y = 1, z = 0.5)
-    ),
-    title = paste0("3D penetration resistance (local coords) – Plot ", plot_id, " | ID ", id_i)
+      aspectmode = "data"
+    )
   )
 
-p3d_local
+
+
+
+
+
+# glimpse(long_data_ids2)
+#
+#
+#
+# plot_id <- 1
+# id_i <- 26012900
+#
+# dfp_local <- long_data_ids2 %>%
+#   filter(id == id_i, plot_number == plot_id) %>%
+#   mutate(
+#     z = -depth
+#   )
+#
+#
+# p3d_local <- plot_ly(
+#   dfp_local,
+#   x = ~local_x, y = ~local_y, z = ~z,
+#   color = ~penetration_resistance,
+#   split = ~replicate_number,
+#   type = "scatter3d",
+#   mode = "lines",
+#   line = list(width = 5),
+#   text = ~paste(
+#     "Name:", name,
+#     "<br>Rep:", replicate_number,
+#     "<br>Depth:", depth,
+#     "<br>PR:", penetration_resistance
+#   )
+# ) %>%
+#   layout(
+#     showlegend = FALSE,   # <- THIS removes the line legend
+#     scene = list(
+#       xaxis = list(title = "Local X", range = c(0, 500)),
+#       yaxis = list(title = "Local Y", range = c(0, 500)),
+#       zaxis = list(title = "Depth (cm)"),
+#       aspectmode = "manual",
+#       aspectratio = list(x = 1, y = 1, z = 0.5)
+#     ),
+#     title = paste0("3D penetration resistance (local coords) – Plot ", plot_id, " | ID ", id_i)
+#   )
+#
+# p3d_local
+#
+
 
 
 
@@ -408,19 +505,70 @@ p3d_local
 
 # try function
 
-pr_limits <- quantile(
-  long_data$penetration_resistance,
-  c(0.02, 0.98),
-  na.rm = TRUE
+# pr_limits <- quantile(
+#   long_data$penetration_resistance,
+#   c(0.02, 0.98),
+#   na.rm = TRUE
+# )
+#
+# pr_limits <- c(0, pr_limits[2])  # force min = 0
+#
+#
+# res <- analyze_plot_3d_kriging(long_data, id_i = 26012232,
+#                                save_dir = file.path(DATA_ROOT, "figures"), pr_limits = pr_limits)
+# res$pred_plot
+# res$se_plot
+
+set.seed(1)
+id_i <- 26012900
+
+long_full <- long_data_ids2 %>%
+  filter(id == id_i, depth >= 10, depth <= 80) %>%
+  mutate(
+    depth = as.numeric(depth),
+    penetration_resistance = as.numeric(penetration_resistance),
+    field_x = as.numeric(field_x),
+    field_y = as.numeric(field_y)
+  )
+
+res <- analyze_plot_3d_kriging(
+  long_data = long_full,
+  id_i = id_i,
+  coord_sys = "field",
+  x_range = c(100, 2500),
+  y_range = c(100, 2500),
+  depth_range = c(10, 80),
+
+  depths_pred = c(10, 20, 30, 40, 60, 70, 80),
+  depths_se   = c(10, 20, 30, 40, 60, 70, 80),
+
+  nx = 45, ny = 45,          # final map resolution (45x45x7 = 14,175 preds)
+  cutoff_3d = 1800,
+  width_3d  = 70,
+
+  safe_mode = FALSE,
+  z_scale = 5,
+  vgm_model = "Sph",
+  vgm_range = 350
+
 )
 
-pr_limits <- c(0, pr_limits[2])  # force min = 0
-
-
-res <- analyze_plot_3d_kriging(long_data, id_i = 26012232,
-                               save_dir = file.path(DATA_ROOT, "figures"), pr_limits = pr_limits)
 res$pred_plot
 res$se_plot
+res$fit
+head(krige_stats)
+
+
+
+
+source(file = "R/add_square_axes.R")
+
+add_square_axes(res$pred_plot, long_data_ids2)
+
+ggsave(file.path(plot_dir, "grid_PT1.png"),
+       height = 6, width = 10, dpi = 300)
+
+add_square_axes(res$se_plot, long_data_ids2)
 
 
 
@@ -428,21 +576,46 @@ res$se_plot
 
 
 
-# force the legend scales to the same for all
 
-ids <- sort(unique(long_data$id))
 
-pr_limits <- c(0, max(long_data$penetration_resistance, na.rm = TRUE))
-se_limits <- c(0, max(sqrt(res$kriged_3d$var1.var), na.rm = TRUE))
 
-results <- lapply(ids, function(i) {
-  analyze_plot_3d_kriging(
-    long_data,
-    id_i = i,
-    pr_limits = pr_limits,
-    save_dir = file.path(DATA_ROOT, "figures")
-  )
-})
+
+
+
+
+
+
+# res_field <- analyze_plot_3d_kriging(
+#   long_data = long_data_ids2,
+#   id_i = 26012900,
+#   coord_sys = "field",
+#   nx = 80, ny = 80  # bump resolution for whole site
+# )
+#
+# res_field$pred_plot
+# res_field$se_plot
+#
+#
+#
+#
+#
+#
+#
+# # force the legend scales to the same for all
+#
+# ids <- sort(unique(long_data$id))
+#
+# pr_limits <- c(0, max(long_data$penetration_resistance, na.rm = TRUE))
+# se_limits <- c(0, max(sqrt(res$kriged_3d$var1.var), na.rm = TRUE))
+#
+# results <- lapply(ids, function(i) {
+#   analyze_plot_3d_kriging(
+#     long_data,
+#     id_i = i,
+#     pr_limits = pr_limits,
+#     save_dir = file.path(DATA_ROOT, "figures")
+#   )
+# })
 
 
 
