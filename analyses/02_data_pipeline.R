@@ -86,6 +86,8 @@ long_data <- wide_all %>%
     replicate_number = str_match(name, "^PLOT-\\d{3}\\.(\\d+)")[, 2]
   )
 
+glimpse(long_data)
+
 write.csv(long_data, file.path(long_dir, "long_format_data.csv"), row.names = FALSE)
 
 

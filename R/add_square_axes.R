@@ -16,8 +16,8 @@ add_square_axes <- function(p,
   y_labels  <- if (flip_rows) rev(1:n_rows) else 1:n_rows
 
   p +
-    ggplot2::geom_vline(xintercept = x_lines, colour = "white", linewidth = 0.3) +
-    ggplot2::geom_hline(yintercept = y_lines, colour = "white", linewidth = 0.3) +
+    ggplot2::geom_vline(xintercept = x_lines, colour = "grey", linewidth = 0.1) +
+    ggplot2::geom_hline(yintercept = y_lines, colour = "grey", linewidth = 0.1) +
     ggplot2::scale_x_continuous(breaks = x_centers, labels = x_labels) +
     ggplot2::scale_y_continuous(breaks = y_centers, labels = y_labels) +
     ggplot2::labs(x = "Square letter", y = "Square number")
