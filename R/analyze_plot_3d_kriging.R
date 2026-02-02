@@ -329,11 +329,11 @@ library(gstat)
 library(sp)
 library(dplyr)
 
-df_cv <- long_preview %>%
-  filter(id == 26012900) %>%
+df_cv <- long_ready %>%
   mutate(z_scaled = depth * res$z_scale_used)
 
 coordinates(df_cv) <- ~ field_x + field_y + z_scaled
+
 
 cv <- gstat::krige.cv(
   penetration_resistance ~ 1,

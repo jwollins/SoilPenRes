@@ -570,7 +570,8 @@ ggsave(file.path(plot_dir, "grid_PT1.png"),
 
 add_square_axes(res$se_plot, long_data_ids2)
 
-
+ggsave(file.path(plot_dir, "grid_PT1_SE.png"),
+       height = 6, width = 10, dpi = 300)
 
 
 
