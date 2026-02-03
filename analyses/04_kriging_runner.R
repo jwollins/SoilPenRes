@@ -7,11 +7,14 @@ rm(list = ls()); gc()
 # ---- Packages + project functions ----
 source("analyses/01_packages.R")      # your package loader
 source("config.R")                   # defines DATA_ROOT
+library(readr)   # faster + safer than read.csv
 
 # Core functions
 source("R/analyze_plot_3d_kriging.R")
 source("R/prep_long_for_kriging.R")
 source("R/add_square_axes.R")
+source("R/plot_orthogonal_sections_5m.R")
+source("R/plot_orthogonal_sections.R")
 
 # If you saved run_id() in its own file:
 source("R/run_id.R")
@@ -59,7 +62,7 @@ local_coords <- local_coords %>%
   )
 
 # ---- Run settings (edit these) ----
-DEPTHS <- c(10, 20, 30, 40, 60, 70, 80)
+DEPTHS <- c(10, 20, 30, 40, 50, 60, 70, 80)
 
 SQUARE_SIZE <- 500
 N_ROWS <- 20
@@ -123,11 +126,6 @@ write.csv(log_df, file.path(krig_dir, "kriging_run_log.csv"), row.names = FALSE)
 
 # ---- Plot all Krige DF's ----
 
-
-library(dplyr)
-library(readr)   # faster + safer than read.csv
-library(ggplot2)
-
 krig_files <- list.files(
   krig_dir,
   pattern = "^kriged_field_id_\\d+\\.csv$",
@@ -170,19 +168,6 @@ p
 
 
 
-
-# p_depths <- ggplot(
-#   krige_best %>% filter(depth %in% c(10, 20, 30, 40, 50, 60, 70, 80)),
-#   aes(field_x, field_y, fill = pr_pred)
-# ) +
-#   geom_tile() +
-#   coord_equal(expand = FALSE) +
-#   facet_wrap(~ depth) +
-#   scale_fill_viridis_c(option = "inferno",
-#                        name = "PR (MPa)") +
-#   theme_bw()
-#
-# p_depths
 
 library(scales)
 
@@ -283,19 +268,32 @@ ggsave(filename = paste0(plot_dir, "kriged_hectare_grid.png"),
 
 
 
-# lims <- range(krige_best$pr_pred, na.rm = TRUE)
-#
-# ggplot(krige_best %>% filter(depth == 10),
-#        aes(field_x, field_y, fill = pr_pred)) +
-#   geom_tile() +
-#   coord_equal(expand = FALSE) +
-#   scale_fill_viridis_c(name = "PR (MPa)", limits = lims) +
-#   theme_bw()
+
+
+# ---- Orthogonal cross-sections ----
+
+plot_orthogonal_sections(
+  krige_best,
+  x0 = 4250,
+  y0 = 6250
+)
+
+ggsave(filename = paste0(plot_dir, "orthogonal_sections.png"))
 
 
 
 
+# ---- 5 m × 5 m intersection (band-averaged cross-sections) ----
 
+plot_orthogonal_sections_5m(
+  krige_best,
+  x0 = 4250,
+  y0 = 6250,
+  window_m = 5,
+  agg = "wmean_se"   # or "mean"
+)
+
+ggsave(filename = paste0(plot_dir, "orthogonal_sections_5m.png"))
 
 
 
