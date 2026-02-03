@@ -72,7 +72,7 @@ GRID_STEP <- 100            # cm
 BUFFER <- 250               # cm
 
 # Option A: run a single ID
-ids_to_run <- c(26020200)
+ids_to_run <- c(26013000)
 
 # Option B: run all IDs present in long_data (uncomment)
 # ids_to_run <- sort(unique(long_data$id))
@@ -138,7 +138,7 @@ glimpse(krige_all)
 krige_all %>% count(id)
 
 
-ids <- c(26012900, 26013000, 26020200)
+ids <- c(26012900, 26013000, 26020200, 26020300)
 krige_all <- krige_all %>% filter(id %in% ids)
 
 
@@ -148,7 +148,7 @@ krige_best <- krige_all %>%
   ungroup()
 
 
-depth_i <- 10
+depth_i <- 50
 
 p <- ggplot(
   krige_best %>% filter(depth == depth_i),
@@ -263,6 +263,12 @@ ggsave(filename = paste0(plot_dir, "kriged_hectare_grid.png"),
 
 
 
+
+
+
+
+
+
 # p_depths %>% add_square_axes(flip_rows = FLIP_ROWS)
 
 
@@ -274,8 +280,8 @@ ggsave(filename = paste0(plot_dir, "kriged_hectare_grid.png"),
 
 plot_orthogonal_sections(
   krige_best,
-  x0 = 4250,
-  y0 = 6250
+  x0 = 2250,
+  y0 = 8250
 )
 
 ggsave(filename = paste0(plot_dir, "orthogonal_sections.png"))
@@ -287,8 +293,8 @@ ggsave(filename = paste0(plot_dir, "orthogonal_sections.png"))
 
 plot_orthogonal_sections_5m(
   krige_best,
-  x0 = 4250,
-  y0 = 6250,
+  x0 = 2250,
+  y0 = 8250,
   window_m = 5,
   agg = "wmean_se"   # or "mean"
 )

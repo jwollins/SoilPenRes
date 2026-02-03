@@ -17,11 +17,11 @@ library(ggplot2)
 library(plotly)
 
 # ---- Config ----
-# ID_I <- 26020200
-ID_I <- c(26020200, 26020201, 26020202)   # <- multiple IDs
+ID_I <- 26020300
+# ID_I <- c(26020200, 26020201, 26020202)   # <- multiple IDs
 
 
-DEPTHS <- c(10, 20, 30, 40, 60, 70, 80)
+DEPTHS <- c(10, 20, 30, 40, 50, 60, 70, 80)
 
 SQUARE_SIZE <- 500     # cm
 N_ROWS <- 20
@@ -205,66 +205,66 @@ p3d
 
 
 
-# ---- Krige + save outputs ----
-
-bbox <- make_bbox(
-  long_ready,
-  buffer = BUFFER,
-  grid_step = GRID_STEP,
-  hectare_min = HECTARE_MIN,
-  hectare_max = HECTARE_MAX
-)
-
-res <- analyze_plot_3d_kriging(
-  long_data = long_ready,
-  id_i = ID_I,
-  coord_sys = "field",
-  x_range = bbox$x_range,
-  y_range = bbox$y_range,
-  depth_range = c(min(DEPTHS), max(DEPTHS)),
-  depths_pred = DEPTHS,
-  depths_se   = DEPTHS,
-  nx = bbox$nx,
-  ny = bbox$ny,
-  cutoff_3d = 1800,
-  width_3d  = 70,
-  safe_mode = FALSE,
-  z_scale = 5,
-  vgm_model = "Sph",
-  vgm_range = 350
-)
-
-# add hectare grid overlay & save plots
-pred_plot <- add_square_axes(res$pred_plot, flip_rows = FLIP_ROWS)
-se_plot   <- add_square_axes(res$se_plot,   flip_rows = FLIP_ROWS)
-
-ggsave(file.path(plot_dir, paste0("kriged_grid_id_", ID_I, ".png")),
-       plot = pred_plot, height = 6, width = 10, dpi = 300)
-
-ggsave(file.path(plot_dir, paste0("kriged_grid_se_id_", ID_I, ".png")),
-       plot = se_plot, height = 6, width = 10, dpi = 300)
-
-# tidy kriged output
-kr_out <- as.data.frame(res$kriged_3d) %>%
-  transmute(
-    id = ID_I,
-    field_x = .data[[res$x_col]],
-    field_y = .data[[res$y_col]],
-    depth = z_scaled / res$z_scale_used,
-    pr_pred = var1.pred,
-    kriging_se = sqrt(pmax(var1.var, 0))
-  ) %>%
-  filter(depth %in% DEPTHS)
-
-write.csv(
-  kr_out,
-  file.path(krig_dir, paste0("kriged_field_id_", ID_I, ".csv")),
-  row.names = FALSE
-)
-
-# quick sanity
-range(kr_out$field_x); range(kr_out$field_y)
-
+# # ---- Krige + save outputs ----
+#
+# bbox <- make_bbox(
+#   long_ready,
+#   buffer = BUFFER,
+#   grid_step = GRID_STEP,
+#   hectare_min = HECTARE_MIN,
+#   hectare_max = HECTARE_MAX
+# )
+#
+# res <- analyze_plot_3d_kriging(
+#   long_data = long_ready,
+#   id_i = ID_I,
+#   coord_sys = "field",
+#   x_range = bbox$x_range,
+#   y_range = bbox$y_range,
+#   depth_range = c(min(DEPTHS), max(DEPTHS)),
+#   depths_pred = DEPTHS,
+#   depths_se   = DEPTHS,
+#   nx = bbox$nx,
+#   ny = bbox$ny,
+#   cutoff_3d = 1800,
+#   width_3d  = 70,
+#   safe_mode = FALSE,
+#   z_scale = 5,
+#   vgm_model = "Sph",
+#   vgm_range = 350
+# )
+#
+# # add hectare grid overlay & save plots
+# pred_plot <- add_square_axes(res$pred_plot, flip_rows = FLIP_ROWS)
+# se_plot   <- add_square_axes(res$se_plot,   flip_rows = FLIP_ROWS)
+#
+# ggsave(file.path(plot_dir, paste0("kriged_grid_id_", ID_I, ".png")),
+#        plot = pred_plot, height = 6, width = 10, dpi = 300)
+#
+# ggsave(file.path(plot_dir, paste0("kriged_grid_se_id_", ID_I, ".png")),
+#        plot = se_plot, height = 6, width = 10, dpi = 300)
+#
+# # tidy kriged output
+# kr_out <- as.data.frame(res$kriged_3d) %>%
+#   transmute(
+#     id = ID_I,
+#     field_x = .data[[res$x_col]],
+#     field_y = .data[[res$y_col]],
+#     depth = z_scaled / res$z_scale_used,
+#     pr_pred = var1.pred,
+#     kriging_se = sqrt(pmax(var1.var, 0))
+#   ) %>%
+#   filter(depth %in% DEPTHS)
+#
+# write.csv(
+#   kr_out,
+#   file.path(krig_dir, paste0("kriged_field_id_", ID_I, ".csv")),
+#   row.names = FALSE
+# )
+#
+# # quick sanity
+# range(kr_out$field_x); range(kr_out$field_y)
+#
 
 
 
