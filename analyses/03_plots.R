@@ -113,8 +113,6 @@ local_coords <- local_coords %>%
 
 # ---- Profile plots ----
 
-glimpse()
-
 
 plot_mean_profiles <- function(long_df, id_i) {
   summary_profiles <- long_df %>%
@@ -205,66 +203,82 @@ p3d
 
 
 
-# # ---- Krige + save outputs ----
-#
-# bbox <- make_bbox(
-#   long_ready,
-#   buffer = BUFFER,
-#   grid_step = GRID_STEP,
-#   hectare_min = HECTARE_MIN,
-#   hectare_max = HECTARE_MAX
-# )
-#
-# res <- analyze_plot_3d_kriging(
-#   long_data = long_ready,
-#   id_i = ID_I,
-#   coord_sys = "field",
-#   x_range = bbox$x_range,
-#   y_range = bbox$y_range,
-#   depth_range = c(min(DEPTHS), max(DEPTHS)),
-#   depths_pred = DEPTHS,
-#   depths_se   = DEPTHS,
-#   nx = bbox$nx,
-#   ny = bbox$ny,
-#   cutoff_3d = 1800,
-#   width_3d  = 70,
-#   safe_mode = FALSE,
-#   z_scale = 5,
-#   vgm_model = "Sph",
-#   vgm_range = 350
-# )
-#
-# # add hectare grid overlay & save plots
-# pred_plot <- add_square_axes(res$pred_plot, flip_rows = FLIP_ROWS)
-# se_plot   <- add_square_axes(res$se_plot,   flip_rows = FLIP_ROWS)
-#
-# ggsave(file.path(plot_dir, paste0("kriged_grid_id_", ID_I, ".png")),
-#        plot = pred_plot, height = 6, width = 10, dpi = 300)
-#
-# ggsave(file.path(plot_dir, paste0("kriged_grid_se_id_", ID_I, ".png")),
-#        plot = se_plot, height = 6, width = 10, dpi = 300)
-#
-# # tidy kriged output
-# kr_out <- as.data.frame(res$kriged_3d) %>%
-#   transmute(
-#     id = ID_I,
-#     field_x = .data[[res$x_col]],
-#     field_y = .data[[res$y_col]],
-#     depth = z_scaled / res$z_scale_used,
-#     pr_pred = var1.pred,
-#     kriging_se = sqrt(pmax(var1.var, 0))
-#   ) %>%
-#   filter(depth %in% DEPTHS)
-#
-# write.csv(
-#   kr_out,
-#   file.path(krig_dir, paste0("kriged_field_id_", ID_I, ".csv")),
-#   row.names = FALSE
-# )
-#
-# # quick sanity
-# range(kr_out$field_x); range(kr_out$field_y)
-#
+
+
+
+# --- P wave velocity ####
+
+
+## ---- data ----
+
+pvel_dat <- read.csv(file = file.path(info_dir, "20A_1R_profiles.csv"))
+
+summary_profiles <- read.csv(file.path(sum_dir, "summary_profiles.csv"))
+
+
+## ---- filter ----
+
+pr_dat_20A_1R <- dplyr::filter(summary_profiles, id == "26012238" | id == "26012232")
+
+
+pr_dat_20A_1R$tile <- if_else(condition = pr_dat_20A_1R$id == "26012238",
+                              true = "20A",  false = "1R")
+
+
+glimpse(pvel_dat)
+glimpse(pr_dat_20A_1R)
+
+
+pvel_dat <- pvel_dat %>%
+  mutate(depth = abs(z) * 100)
+
+y_limits <- range(
+  c(pr_dat_20A_1R$depth, pvel_dat$depth),
+  na.rm = TRUE
+)
+
+
+
+
+pr_plot <-
+  ggplot(pr_dat_20A_1R,
+         aes(x = mean, y = depth, group = tile, colour = tile)) +
+  geom_errorbarh(aes(xmin = mean - sem, xmax = mean + sem),
+                 height = 0.8, alpha = 0.3) +
+  geom_path(linewidth = 1) +
+  scale_y_reverse(limits = c(90, 0), expand = c(0, 0)) +
+  labs(
+    x = "Penetration resistance (MPa)",
+    y = "Depth (cm)",
+    colour = "Treatment",
+    title = "Mean penetration resistance"
+  ) +
+  theme_bw()
+
+
+pr_plot
+
+
+names(pw_vel_dat_20A)
+
+
+pwv_plot <-
+  ggplot(pvel_dat,
+         aes(x = velocity_xy_median, y = depth, group = tile, colour = tile)) +
+  geom_path(linewidth = 1) +
+  scale_y_reverse(limits = c(90, 0), expand = c(0, 0)) +
+  labs(
+    x = "P Wave Velocity (m/s)",
+    y = "Depth (cm)",
+    colour = "Treatment",
+    title = "Median P wave velocity"
+  ) +
+  theme_bw()
+
+pwv_plot
+
+
+ggarrange(pr_plot, pwv_plot, common.legend = TRUE, legend = "bottom")
 
 
 
