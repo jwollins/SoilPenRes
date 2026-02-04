@@ -229,13 +229,13 @@ glimpse(pvel_dat)
 glimpse(pr_dat_20A_1R)
 
 
-pvel_dat <- pvel_dat %>%
-  mutate(depth = abs(z) * 100)
+# pvel_dat <- pvel_dat %>%
+#   mutate(depth = abs(z) * 100)
 
-y_limits <- range(
-  c(pr_dat_20A_1R$depth, pvel_dat$depth),
-  na.rm = TRUE
-)
+# y_limits <- range(
+#   c(pr_dat_20A_1R$depth, pvel_dat$depth),
+#   na.rm = TRUE
+# )
 
 
 
@@ -251,7 +251,8 @@ pr_plot <-
     x = "Penetration resistance (MPa)",
     y = "Depth (cm)",
     colour = "Treatment",
-    title = "Mean penetration resistance"
+    # title = "Mean penetration resistance (± SE)"
+    title = expression("Mean PR (± SE)")
   ) +
   theme_bw()
 
@@ -259,21 +260,38 @@ pr_plot <-
 pr_plot
 
 
-names(pw_vel_dat_20A)
+names(pvel_dat)
 
+glimpse(pvel_dat)
+
+pvel_dat <- pvel_dat %>%
+  mutate(
+    depth = abs(z) * 100,
+    se = velocity_xy_std / sqrt(16)
+  )
 
 pwv_plot <-
   ggplot(pvel_dat,
-         aes(x = velocity_xy_median, y = depth, group = tile, colour = tile)) +
+         aes(x = velocity_xy_mean, y = depth, colour = tile)) +
+  geom_errorbarh(
+    aes(
+      xmin = velocity_xy_mean - se,
+      xmax = velocity_xy_mean + se
+    ),
+    height = 1,
+    alpha = 0.3
+  ) +
   geom_path(linewidth = 1) +
   scale_y_reverse(limits = c(90, 0), expand = c(0, 0)) +
   labs(
     x = "P Wave Velocity (m/s)",
     y = "Depth (cm)",
     colour = "Treatment",
-    title = "Median P wave velocity"
+    # title = "Mean P wave velocity (± SE)"
+    title = expression("Mean " * italic(v[p]) * " (± SE)")
   ) +
   theme_bw()
+
 
 pwv_plot
 
@@ -287,6 +305,78 @@ ggarrange(pr_plot, pwv_plot, common.legend = TRUE, legend = "bottom")
 
 
 
+pwv_plot_median <-
+  ggplot(pvel_dat,
+         aes(x = velocity_xy_median, y = depth, colour = tile)) +
+  geom_errorbarh(
+    aes(
+      xmin = velocity_xy_median - se,
+      xmax = velocity_xy_median + se
+    ),
+    height = 1,
+    alpha = 0.3
+  ) +
+  geom_path(linewidth = 1) +
+  scale_y_reverse(limits = c(90, 0), expand = c(0, 0)) +
+  labs(
+    x = "P Wave Velocity (m/s)",
+    y = "Depth (cm)",
+    colour = "Treatment",
+    title = expression("Median " * italic(v[p]) * " (± SE)")
+  ) +
+  theme_bw()
+
+pwv_plot_median
+
+
+
+# ---- Correlations ----
+
+# Join the datasets
+summary_combined <- inner_join(pr_dat_20A_1R, pvel_dat,
+                               by = c("tile", "depth")
+)
+
+
+cor_plot <-
+ggplot(
+  data = summary_combined,
+  aes(x = mean, y = velocity_xy_mean, color = tile)
+) +
+  geom_point(size = 1.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  stat_cor(
+    data = subset(summary_combined, tile == "1R"),
+    label.x = 1.2, label.y = 750, color = "turquoise3", show.legend = FALSE
+  ) +
+  stat_cor(
+    data = subset(summary_combined, tile == "20A"),
+    label.x = 1.2, label.y = 800, color = "tomato2", show.legend = FALSE
+  ) +
+  # ylim(100, 800) +
+  labs(
+    x = "Penetration resistance (MPa)",
+    y = expression("P Wave Velocity (m" ~ s^{
+      -1
+    } ~ ")"),
+    title = expression("Correlation: " * italic(v[p]) * " vs PR")
+  ) +
+  # scale_color_manual(
+  #   name = "Treatment",
+  #   values = c("turquoise3", "tomato2"),
+  #   labels = c("Conservation", "Conventional")
+  # ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
+
+ggarrange(pr_plot, pwv_plot, cor_plot,
+          common.legend = TRUE, legend = "bottom", ncol = 3)
+
+
+ggsave(filename = file.path(plot_dir, "pwave_cor_plot.png"),
+       width = 12, height = 6)
 
 
 
@@ -294,5 +384,48 @@ ggarrange(pr_plot, pwv_plot, common.legend = TRUE, legend = "bottom")
 
 
 
+
+
+
+cor_plot_median <-
+  ggplot(
+    data = summary_combined,
+    aes(x = mean, y = velocity_xy_median, color = tile)
+  ) +
+  geom_point(size = 1.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  stat_cor(
+    data = subset(summary_combined, tile == "1R"),
+    label.x = 1.2, label.y = 750, color = "turquoise3", show.legend = FALSE
+  ) +
+  stat_cor(
+    data = subset(summary_combined, tile == "20A"),
+    label.x = 1.2, label.y = 800, color = "tomato2", show.legend = FALSE
+  ) +
+  # ylim(100, 800) +
+  labs(
+    x = "Penetration resistance (MPa)",
+    y = expression("P Wave Velocity (m" ~ s^{
+      -1
+    } ~ ")"),
+    title = expression("Correlation: " * italic(v[p]) * " vs PR")
+  ) +
+  # scale_color_manual(
+  #   name = "Treatment",
+  #   values = c("turquoise3", "tomato2"),
+  #   labels = c("Conservation", "Conventional")
+  # ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
+
+
+ggarrange(pr_plot, pwv_plot_median, cor_plot_median,
+          common.legend = TRUE, legend = "bottom", ncol = 3)
+
+
+ggsave(filename = file.path(plot_dir, "pwave_cor_plot_median.png"),
+       width = 12, height = 6)
 
 
