@@ -14,4 +14,13 @@ suppressPackageStartupMessages({
   library(ggspatial)
   library(plotly)
   library(here)
+  library(ggrepel)
+  library(stringr)
+  library(htmlwidgets)
+  library(webshot2)
+  library(magick)
+  library(stringr)
+  library(tidyr)
+  library(purrr)
+  library(readr)   # faster + safer than read.csv
 })

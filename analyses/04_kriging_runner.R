@@ -2,12 +2,12 @@
 ### Sets up environment, loads data, sources functions, and runs run_id()
 ### J Collins
 
-rm(list = ls()); gc()
+# rm(list = ls()); gc()
 
 # ---- Packages + project functions ----
 source("analyses/01_packages.R")      # your package loader
 source("config.R")                   # defines DATA_ROOT
-library(readr)   # faster + safer than read.csv
+
 
 # Core functions
 source("R/analyze_plot_3d_kriging.R")
@@ -19,26 +19,16 @@ source("R/plot_orthogonal_sections.R")
 # If you saved run_id() in its own file:
 source("R/run_id.R")
 
-library(dplyr)
-library(ggplot2)
-library(purrr)
+
+
 
 stopifnot(dir.exists(DATA_ROOT))
 
-# ---- Paths ----
-proc_dir <- file.path(DATA_ROOT, "processed")
-info_dir <- file.path(DATA_ROOT, "info")
 
-long_dir <- file.path(proc_dir, "long_format_data")
-plot_dir <- file.path(DATA_ROOT, "figures")
-krig_dir <- file.path(proc_dir, "kriging_data")
-
-dir.create(plot_dir, showWarnings = FALSE, recursive = TRUE)
-dir.create(krig_dir, showWarnings = FALSE, recursive = TRUE)
 
 # ---- Load data ----
-long_data <- read.csv(file.path(long_dir, "long_format_data.csv"))
-local_coords <- read.csv(file.path(info_dir, "local_coords2.csv"))
+long_data <- read.csv(file.path(LONG_DIR, "long_format_data.csv"))
+local_coords <- read.csv(file.path(INFO_DIR, "local_coords2.csv"))
 
 # ---- Type cleanup (keep this minimal & stable) ----
 long_data <- long_data %>%
@@ -72,13 +62,13 @@ GRID_STEP <- 100            # cm
 BUFFER <- 250               # cm
 
 # Option A: run a single ID
-ids_to_run <- c(26013000)
+ids_to_run <- c(26030206)
 
 # Option B: run all IDs present in long_data (uncomment)
 # ids_to_run <- sort(unique(long_data$id))
 
 # Option C: run only IDs not already kriged (uncomment)
-# existing <- list.files(krig_dir, pattern = "^kriged_field_id_\\d+\\.csv$", full.names = FALSE)
+# existing <- list.files(KRIG_DIR, pattern = "^kriged_field_id_\\d+\\.csv$", full.names = FALSE)
 # done_ids <- as.integer(gsub("^kriged_field_id_(\\d+)\\.csv$", "\\1", existing))
 # ids_to_run <- setdiff(sort(unique(long_data$id)), done_ids)
 
@@ -88,8 +78,8 @@ results <- purrr::map(
   run_id,
   long_data = long_data,
   local_coords = local_coords,
-  out_dir = krig_dir,
-  plot_dir = plot_dir,
+  out_dir = KRIG_DIR,
+  plot_dir = FIG_DIR,
   square_size = SQUARE_SIZE,
   n_rows = N_ROWS,
   flip_rows = FLIP_ROWS,
@@ -118,7 +108,7 @@ log_df <- purrr::map_dfr(results, function(x) {
   )
 })
 
-write.csv(log_df, file.path(krig_dir, "kriging_run_log.csv"), row.names = FALSE)
+write.csv(log_df, file.path(KRIG_DIR, "kriging_run_log.csv"), row.names = FALSE)
 
 
 
@@ -127,18 +117,21 @@ write.csv(log_df, file.path(krig_dir, "kriging_run_log.csv"), row.names = FALSE)
 # ---- Plot all Krige DF's ----
 
 krig_files <- list.files(
-  krig_dir,
+  KRIG_DIR,
   pattern = "^kriged_field_id_\\d+\\.csv$",
   full.names = TRUE
 )
 
 krige_all <- purrr::map_dfr(krig_files, readr::read_csv, show_col_types = FALSE)
 
+unique(krige_all$id)
 glimpse(krige_all)
 krige_all %>% count(id)
 
 
-ids <- c(26012900, 26013000, 26020200, 26020300)
+ids <- c(26012900, 26013000, 26020200, 26020300, 26020400, 26020501,
+         26020602, 26020900, 26020901, 26021102, 26021604, 26021203,
+         26021705, 26030206)
 krige_all <- krige_all %>% filter(id %in% ids)
 
 
@@ -241,7 +234,7 @@ p_depths
 
 
 
-ggsave(filename = paste0(plot_dir, "kriged_hectare.png"),
+ggsave(filename = paste0(FIG_DIR, "kriged_hectare.png"),
        plot = p_depths, dpi = 300, width = 10, height = 6)
 
 
@@ -257,7 +250,7 @@ p_depths_sq <- add_square_axes(
 
 p_depths_sq
 
-ggsave(filename = paste0(plot_dir, "kriged_hectare_grid.png"),
+ggsave(filename = paste0(FIG_DIR, "kriged_hectare_grid.png"),
        plot = p_depths_sq, dpi = 300, width = 10, height = 6)
 
 
@@ -284,7 +277,7 @@ plot_orthogonal_sections(
   y0 = 8250
 )
 
-ggsave(filename = paste0(plot_dir, "orthogonal_sections.png"))
+ggsave(filename = paste0(FIG_DIR, "orthogonal_sections.png"))
 
 
 
@@ -299,7 +292,7 @@ plot_orthogonal_sections_5m(
   agg = "wmean_se"   # or "mean"
 )
 
-ggsave(filename = paste0(plot_dir, "orthogonal_sections_5m.png"))
+ggsave(filename = paste0(FIG_DIR, "orthogonal_sections_5m.png"))
 
 
 

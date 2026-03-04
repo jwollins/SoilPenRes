@@ -47,6 +47,11 @@ prep_long_for_kriging <- function(long_data, local_coords, id_i,
   stopifnot(nrow(ld2) == nrow(ld))
 
   # sanity: mapping valid
+  print(
+    ld2 %>%
+      dplyr::count(square_letter, sort = TRUE)
+  )
+
   stopifnot(all(ld2$square_letter %in% letter_levels))
   stopifnot(all(ld2$square_row %in% 1:n_rows))
   stopifnot(!anyNA(ld2$square_col))

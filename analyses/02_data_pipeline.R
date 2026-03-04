@@ -4,31 +4,24 @@
 ### 2024-06-22
 
 # ---- Packages + functions ----
-source("analyses/01_packages.R")
-source("R/dms_to_decimal.R")
-source("R/to_long.R")
-source(file = "R/read_pen_file.R")
+# source("analyses/01_packages.R")
+# source("R/dms_to_decimal.R")
+# source("R/to_long.R")
+# source(file = "R/read_pen_file.R")
+
+source(here::here("analyses", "01_packages.R"))
+source(here::here("R", "dms_to_decimal.R"))
+source(here::here("R", "to_long.R"))
+source(here::here("R", "read_pen_file.R"))
+
+source(here::here("config.R"))
+
+# Now just use TXT_DIR, INFO_DIR, LONG_DIR, SUM_DIR, FIG_DIR, etc.
 
 
-
-# ---- Paths (project-relative; no setwd) ----
-
-source("config.R")
-
-stopifnot(dir.exists(DATA_ROOT))
-
-txt_dir   <- file.path(DATA_ROOT, "txt")
-info_dir  <- file.path(DATA_ROOT, "info")
-proc_dir  <- file.path(DATA_ROOT, "processed")
-long_dir  <- file.path(proc_dir, "long_format_data")
-sum_dir   <- file.path(proc_dir, "summary_profiles")
-
-
-dir.create(long_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(sum_dir,  recursive = TRUE, showWarnings = FALSE)
 
 # ---- Inputs ----
-treatment_info <- read.csv(file.path(info_dir, "treatment_info.csv")) %>%
+treatment_info <- read.csv(file.path(INFO_DIR, "treatment_info.csv")) %>%
   mutate(id = as.integer(id))
 
 # helper: id from filename
@@ -41,7 +34,7 @@ id_from_file <- function(path) as.integer(tools::file_path_sans_ext(basename(pat
 
 
 # ---- Read all files ----
-txt_files <- list.files(txt_dir, pattern = "\\.txt$", full.names = TRUE)
+txt_files <- list.files(TXT_DIR, pattern = "\\.txt$", full.names = TRUE)
 
 parsed <- map(txt_files, read_pen_file)
 
@@ -73,7 +66,7 @@ meta_info <- wide_all %>%
     replicate_number = str_match(name, "^PLOT-\\d{3}\\.(\\d+)")[, 2]
   )
 
-write.csv(meta_info, file.path(info_dir, "meta_info.csv"), row.names = FALSE)
+write.csv(meta_info, file.path(INFO_DIR, "meta_info.csv"), row.names = FALSE)
 
 
 # ---- 2) Long-format data (one row per pen × depth) ----
@@ -88,7 +81,7 @@ long_data <- wide_all %>%
 
 glimpse(long_data)
 
-write.csv(long_data, file.path(long_dir, "long_format_data.csv"), row.names = FALSE)
+write.csv(long_data, file.path(LONG_DIR, "long_format_data.csv"), row.names = FALSE)
 
 
 
@@ -105,10 +98,10 @@ summary_profiles <- long_data %>%
     .groups = "drop"
   )
 
-write.csv(summary_profiles, file.path(sum_dir, "summary_profiles.csv"), row.names = FALSE)
+write.csv(summary_profiles, file.path(SUM_DIR, "summary_profiles.csv"), row.names = FALSE)
 
 cat("Saved:\n",
-    "- ", file.path(info_dir, "meta_info.csv"), "\n",
-    "- ", file.path(long_dir, "long_format_data.csv"), "\n",
-    "- ", file.path(sum_dir, "summary_profiles.csv"), "\n")
+    "- ", file.path(INFO_DIR, "meta_info.csv"), "\n",
+    "- ", file.path(LONG_DIR, "long_format_data.csv"), "\n",
+    "- ", file.path(SUM_DIR, "summary_profiles.csv"), "\n")
 
